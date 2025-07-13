@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 Herramienta OSINT para Verificación de Cuentas en Redes Sociales
 Autor: Sistema de Pruebas OSINT
@@ -49,7 +49,6 @@ class OSINTSocialVerifier:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
         
-        # Plataformas de redes sociales a verificar
         self.platforms = {
             'twitter': 'https://twitter.com/{}',
             'instagram': 'https://www.instagram.com/{}',
@@ -96,8 +95,7 @@ class OSINTSocialVerifier:
         
         try:
             response = self.session.get(url, timeout=10, allow_redirects=True)
-            
-            # Analizar respuesta según la plataforma
+    
             exists = self._analyze_response(response, platform)
             
             profile_data = {}
@@ -132,11 +130,9 @@ class OSINTSocialVerifier:
     def _analyze_response(self, response: requests.Response, platform: str) -> bool:
         """Analiza la respuesta HTTP para determinar si la cuenta existe"""
         
-        # Códigos de estado que indican existencia
         if response.status_code == 200:
             content = response.text.lower()
             
-            # Patrones que indican cuenta no encontrada
             not_found_patterns = {
                 'twitter': ["this account doesn't exist", "account suspended", "profile not found"],
                 'instagram': ["page not found", "user not found", "sorry, this page isn't available"],
@@ -169,7 +165,6 @@ class OSINTSocialVerifier:
         content = response.text
         profile_data = {}
         
-        # Extraer datos básicos usando regex
         patterns = {
             'name': [
                 r'<title>([^<]+)</title>',
@@ -199,16 +194,13 @@ class OSINTSocialVerifier:
                     profile_data[field] = match.group(1)
                     break
         
-        # Datos específicos por plataforma
         if platform == 'linkedin':
-            # Extraer información profesional
             job_pattern = r'"headline":\s*"([^"]+)"'
             job_match = re.search(job_pattern, content)
             if job_match:
                 profile_data['job_title'] = job_match.group(1)
         
         elif platform == 'github':
-            # Extraer información de repositorios
             repo_pattern = r'"public_repos":\s*(\d+)'
             repo_match = re.search(repo_pattern, content)
             if repo_match:
@@ -220,10 +212,8 @@ class OSINTSocialVerifier:
         """Calcula un puntaje de confianza basado en los datos del perfil"""
         score = 0.0
         
-        # Puntaje base por existencia
         score += 0.3
         
-        # Puntaje por datos disponibles
         if profile_data.get('name'):
             score += 0.2
         if profile_data.get('description'):
@@ -232,13 +222,12 @@ class OSINTSocialVerifier:
             score += 0.1
         if profile_data.get('location'):
             score += 0.1
-        
-        # Puntaje específico por plataforma
+
         platform_bonus = {
-            'linkedin': 0.1,  # Más profesional
-            'github': 0.1,   # Más técnico
-            'behance': 0.1,  # Más creativo
-            'dribbble': 0.1  # Más creativo
+            'linkedin': 0.1,  
+            'github': 0.1,   
+            'behance': 0.1,  
+            'dribbble': 0.1  
         }
         
         if platform in platform_bonus:
@@ -252,7 +241,7 @@ class OSINTSocialVerifier:
         
         results = []
         
-        # Búsqueda secuencial para evitar rate limiting
+        
         for platform in self.platforms.keys():
             print(f"[INFO] Verificando {platform}...")
             account = self.check_username_availability(username, platform)
@@ -267,7 +256,6 @@ class OSINTSocialVerifier:
                     'profile_data': account.profile_data
                 })
             
-            # Pausa para evitar rate limiting
             time.sleep(1)
         
         return results
@@ -282,13 +270,10 @@ class OSINTSocialVerifier:
             'public_presence': [],
             'verification_status': 'unknown'
         }
-        
-        # Búsqueda en Google (simulada)
+    
         google_query = f'"{email}"'
         print(f"[INFO] Consulta de Google sugerida: {google_query}")
         
-        # Simulación de verificación de breaches
-        # En un entorno real, usarías APIs como HaveIBeenPwned
         results['verification_status'] = 'requires_manual_check'
         
         return results
@@ -303,8 +288,7 @@ class OSINTSocialVerifier:
             'telegram_found': False,
             'public_listings': []
         }
-        
-        # Verificación básica de formato
+ 
         if re.match(r'^\+\d{1,3}\s?\d{3}\s?\d{3}\s?\d{3}$', phone):
             results['format_valid'] = True
         else:
@@ -316,7 +300,6 @@ class OSINTSocialVerifier:
         """Genera variantes del nombre de usuario"""
         variants = [base_username]
         
-        # Variantes comunes
         variants.extend([
             base_username + '1',
             base_username + '2',
@@ -329,35 +312,28 @@ class OSINTSocialVerifier:
             base_username.replace('_', '-'),
         ])
         
-        # Remover duplicados
         return list(set(variants))
     
     def comprehensive_search(self, profile: PersonProfile) -> Dict:
         """Realiza una búsqueda comprensiva del perfil"""
         print(f"[INFO] Iniciando búsqueda comprensiva para: {profile.name}")
-        
-        # Establecer perfil objetivo
+
         self.set_target_profile(profile)
-        
-        # Buscar nombre de usuario principal
+
         main_results = self.search_all_platforms(profile.common_username)
-        
-        # Buscar variantes del nombre de usuario
+
         variants = self.generate_username_variants(profile.common_username)
         variant_results = []
         
-        for variant in variants[:5]:  # Limitar a 5 variantes
+        for variant in variants[:5]:
             if variant != profile.common_username:
                 print(f"[INFO] Probando variante: {variant}")
                 variant_results.extend(self.search_all_platforms(variant))
         
-        # Buscar email
         email_results = self.search_email_presence(profile.email)
         
-        # Buscar teléfono
         phone_results = self.search_phone_presence(profile.phone)
         
-        # Compilar resultados
         self.report_data['verification_summary'] = {
             'main_username_results': len(main_results),
             'variant_results': len(variant_results),
@@ -366,8 +342,7 @@ class OSINTSocialVerifier:
             'total_accounts_found': len(main_results) + len(variant_results),
             'high_confidence_accounts': len([r for r in main_results + variant_results if r.confidence_score > 0.7])
         }
-        
-        # Generar recomendaciones
+
         self._generate_recommendations()
         
         return self.report_data
@@ -503,10 +478,8 @@ def main():
     print("Herramienta OSINT para Verificación de Redes Sociales")
     print("="*55)
     
-    # Crear instancia del verificador
     verifier = OSINTSocialVerifier()
     
-    # Menú de opciones
     print("\nSelecciona una opción:")
     print("1. Ingresar datos manualmente")
     print("2. Usar perfil de ejemplo (María Elena Rodríguez)")
@@ -515,14 +488,12 @@ def main():
     choice = input("\nIngresa tu opción (1-3): ").strip()
     
     if choice == "1":
-        # Solicitar datos del usuario
         profile = get_user_input()
         if profile is None:
             print(" Error: Datos incompletos. Saliendo...")
             return
         
     elif choice == "2":
-        # Usar perfil de ejemplo
         profile = use_example_profile()
         print(f"✅ Usando perfil de ejemplo: {profile.name}")
         
@@ -534,8 +505,7 @@ def main():
         print(" Opción inválida. Saliendo...")
         return
     
-    # Confirmación antes de ejecutar
-    print(f"\n📋 RESUMEN DEL PERFIL A INVESTIGAR:")
+    print(f"\n RESUMEN DEL PERFIL A INVESTIGAR:")
     print(f"   Nombre: {profile.name}")
     print(f"   Email: {profile.email if profile.email else 'No proporcionado'}")
     print(f"   Teléfono: {profile.phone if profile.phone else 'No proporcionado'}")
@@ -546,19 +516,16 @@ def main():
     
     confirm = input("\n¿Continuar con la búsqueda? (s/n): ").strip().lower()
     if confirm not in ['s', 'si', 'y', 'yes']:
-        print("🛑 Búsqueda cancelada por el usuario")
+        print("Búsqueda cancelada por el usuario")
         return
     
     print(f"\n Iniciando búsqueda OSINT para: {profile.name}")
     print(" Esto puede tomar varios minutos...")
     
-    # Realizar búsqueda comprensiva
     results = verifier.comprehensive_search(profile)
     
-    # Mostrar resumen
     verifier.print_summary()
-    
-    # Preguntar si quiere exportar resultados
+
     export_choice = input("\n¿Exportar resultados? (s/n): ").strip().lower()
     if export_choice in ['s', 'si', 'y', 'yes']:
         verifier.export_results_csv()
