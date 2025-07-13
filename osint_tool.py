@@ -2,7 +2,7 @@
 """
 Herramienta OSINT para Verificación de Cuentas en Redes Sociales
 Autor: Sistema de Pruebas OSINT
-Versión: 1.0
+Versión: DEDSEC001
 """
 
 import requests
